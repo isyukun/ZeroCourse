@@ -1,0 +1,9 @@
+*.sqlite*
+
+# Ignore all files in the database directory
+/vendor
+.env
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
