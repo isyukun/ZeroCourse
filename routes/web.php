@@ -29,12 +29,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     // Route untuk tambah modul ke kursus
     Route::post('courses/{course}/modules', [ModuleController::class, 'store'])->name('modules.store');
+    Route::put('/modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
+    Route::delete('/modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
     
     // Route untuk tambah materi ke modul
     Route::post('modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
+    Route::get('/modules/{module}/lessons/create', [LessonController::class, 'create'])->name('lessons.create');
+    Route::post('/modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
     
     // Route untuk melihat materi
     Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
+    Route::get('/lessons/{lesson}/edit', [LessonController::class, 'edit'])->name('lessons.edit');
+    Route::put('/lessons/{lesson}', [LessonController::class, 'update'])->name('lessons.update');
+    Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy'])->name('lessons.destroy');
 });
 
 Route::middleware(['auth'])->group(function () {

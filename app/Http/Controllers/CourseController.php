@@ -39,4 +39,15 @@ class CourseController extends Controller
 
         return redirect()->route('courses.index')->with('success', 'Kursus berhasil dibuat!');
     }
+        
+    // Menampilkan detail kursus berdasarkan slug
+    public function show($slug)
+    {
+        // Cari kursus berdasarkan slug, jika tidak ada tampilkan 404
+        $course = Course::with(['category', 'modules.lessons'])
+            ->where('slug', $slug)
+            ->firstOrFail();
+
+        return view('courses.show', compact('course'));
+    }
 }

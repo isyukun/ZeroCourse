@@ -22,10 +22,11 @@ class StoreCourseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'title' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'description' => 'required|string',
-            'image' => 'nullable|image|mimes:jpg,png,jpeg|max:2048',
+            'title' => ['required', 'string', 'max:255'],
+            'category_id' => ['required', 'exists:categories,id'], // Baris ini WAJIB ada
+            'description' => ['required', 'string'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'status' => ['nullable', 'string', 'in:draft,published'],
         ];
     }
 }
