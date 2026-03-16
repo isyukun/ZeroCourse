@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @param int $lessonId
+ * @return bool
+ */
+
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -56,6 +61,7 @@ class User extends Authenticatable
     {
         // Sebagai siswa
         return $this->belongsToMany(Course::class, 'enrollments')
+                    ->withPivot('id')
                     ->withTimestamps();
     }
 

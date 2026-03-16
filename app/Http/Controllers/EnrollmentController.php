@@ -3,21 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Enrollment;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class EnrollmentController extends Controller
 {
     public function store(Course $course)
     {
-        // Cek apakah sudah terdaftar
-        if (Auth::user()->enrolledCourses()->where('course_id', $course->id)->exists()) {
-            return back()->with('error', 'Kamu sudah terdaftar di kursus ini.');
+        // 1. Cegah instruktur mendaftar di kursus sendiri
+        if ($course->user_id === Auth::id()) {
+            return back()->with('error', 'Instruktur tidak perlu mendaftar di kursus sendiri.');
         }
 
-        // Attach siswa ke kursus
-        Auth::user()->enrolledCourses()->attach($course->id);
+        // 2. Gunakan firstOrCreate untuk mencegah duplikasi pendaftaran
+        Enrollment::firstOrCreate([
+            'user_id' => Auth::id(),
+            'course_id' => $course->id,
+        ]);
 
         return redirect()->route('courses.show', $course->slug)
-                         ->with('success', 'Selamat! Kamu berhasil mendaftar.');
+                        ->with('success', 'Selamat! Kamu berhasil mendaftar.');
     }
 }

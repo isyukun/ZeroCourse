@@ -15,9 +15,10 @@
                     {!! $lesson->content !!}
                 </div>
 
-                <div class="flex justify-between border-t pt-6">
+                {{-- Navigasi Materi --}}
+                <div class="flex justify-between border-t pt-6 mb-8">
                     @if($prevLesson)
-                        <a href="{{ route('lessons.show', $prevLesson->id) }}" class="text-blue-600 hover:underline">
+                        <a href="{{ route('lessons.show', $prevLesson->id) }}" class="text-blue-600 font-semibold hover:underline">
                             &larr; {{ $prevLesson->title }}
                         </a>
                     @else
@@ -25,21 +26,35 @@
                     @endif
 
                     @if($nextLesson)
-                        <a href="{{ route('lessons.show', $nextLesson->id) }}" class="text-blue-600 hover:underline">
-                            {{ $nextLesson->title }} &rarr;
-                        </a>
+                        {{-- Logika: Hanya bisa klik Next jika materi ini sudah selesai --}}
+                        @if(auth()->user()->hasCompleted($lesson->id))
+                            <a href="{{ route('lessons.show', $nextLesson->id) }}" class="text-blue-600 font-semibold hover:underline">
+                                {{ $nextLesson->title }} &rarr;
+                            </a>
+                        @else
+                            <span class="text-gray-400 cursor-not-allowed">
+                                {{ $nextLesson->title }} &rarr; (Selesaikan materi ini)
+                            </span>
+                        @endif
                     @endif
                 </div>
 
+                {{-- Tombol Status Selesai --}}
                 <div class="mt-8">
-                    <form action="{{ route('lessons.complete', $lesson->id) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700">
-                            Tandai Materi Selesai
-                        </button>
-                    </form>
+                    @if(auth()->user()->hasCompleted($lesson->id))
+                        <div class="flex items-center text-green-600 font-bold bg-green-50 p-4 rounded-lg">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            Materi ini sudah diselesaikan!
+                        </div>
+                    @else
+                        <form action="{{ route('lessons.complete', $lesson->id) }}" method="POST">
+                            @csrf
+                            <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition">
+                                Tandai Materi Selesai
+                            </button>
+                        </form>
+                    @endif
                 </div>
-
             </div>
         </div>
     </div>
