@@ -36,45 +36,51 @@ class LessonController extends Controller
     public function show(Lesson $lesson)
     {
         $user = Auth::user();
-        $module = $lesson->module;
+        
+        // 1. Eager Load Module dan semua materinya untuk Sidebar
+        $module = $lesson->module->load(['lessons' => function($query) {
+            $query->orderBy('order', 'asc');
+        }]);
 
-        // 1. Otorisasi: Pastikan user terdaftar di kursus ini
-        if (!$user->enrolledCourses->contains($module->course_id)) {
+        // 2. Tentukan Status Akses
+        $isOwner = $module->course->user_id === $user->id;
+        $isEnrolled = $user->enrolledCourses->contains($module->course_id);
+
+        // Otorisasi: Izinkan jika dia Pemilik (Instructor) ATAU sudah Terdaftar (Student)
+        if (!$isOwner && !$isEnrolled) {
             abort(403, 'Anda harus mendaftar kursus ini untuk mengakses materi.');
         }
 
-        // 2. Logika Lock: Cek apakah materi ini sudah terbuka (unlocked)
-        // Syarat: Materi sebelumnya harus sudah selesai (hasCompleted)
+        // 3. Logika Lock: Cek materi sebelumnya
         $prevLesson = Lesson::where('module_id', $module->id)
             ->where('order', '<', $lesson->order)
             ->orderBy('order', 'desc')
             ->first();
 
-        if ($prevLesson && !$user->hasCompleted($prevLesson->id)) {
-            // Tambahkan pengecekan: pastikan materi yang dituju bukan materi yang sedang diakses
-            if ($lesson->id !== $prevLesson->id) {
-                return redirect()->route('lessons.show', $prevLesson->id)
-                                ->with('error', 'Selesaikan materi sebelumnya terlebih dahulu!');
-            }
+        // Syarat Lock: Bukan Owner && Ada materi sebelumnya && Materi sebelumnya belum selesai
+        if (!$isOwner && $prevLesson && !$user->hasCompleted($prevLesson->id)) {
+            return redirect()->route('lessons.show', $prevLesson->id)
+                            ->with('error', 'Selesaikan materi sebelumnya terlebih dahulu!');
         }
 
-        // 3. Navigasi: Cari materi berikutnya dan sebelumnya
+        // 4. Navigasi: Cari materi berikutnya
         $nextLesson = Lesson::where('module_id', $module->id)
             ->where('order', '>', $lesson->order)
             ->orderBy('order', 'asc')
             ->first();
 
-        return view('lessons.show', compact('lesson', 'nextLesson', 'prevLesson'));
+        // Kirim $isOwner ke view agar bisa dipakai buat nampilin badge "Mode Preview"
+        return view('lessons.show', compact('lesson', 'nextLesson', 'prevLesson', 'module', 'isOwner'));
     }
 
     public function edit(Lesson $lesson)
     {
-        // Cek otorisasi
-        if ($lesson->course->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
+        // Cek otorisasi lewat Module
+        // Karena Lesson punya module_id, dan Module punya course_id
+        if ($lesson->module->course->user_id !== Auth::id()) {
+            abort(403, 'Anda bukan pemilik kursus ini.');
         }
 
-        // Jika tidak abort, langsung return view
         return view('lessons.edit', compact('lesson'));
     }
 
@@ -83,6 +89,7 @@ class LessonController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required',
+            'video_url' => 'nullable|url',
         ]);
 
         $lesson->update($validated);

@@ -16,18 +16,6 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-
-                    {{-- Link Khusus Instruktur --}}
-                    @if(Auth::user()->role === 'instructor')
-                        <x-nav-link :href="route('courses.index')" :active="request()->routeIs('courses.*')">
-                            {{ __('Kelola Kursus') }}
-                        </x-nav-link>
-                    @endif
-
-                    {{-- Link Katalog untuk Siswa mencari materi baru --}}
-                    <x-nav-link :href="url('/explore')" :active="request()->is('explore')">
-                        {{ __('Cari Kursus') }}
-                    </x-nav-link>
                 </div>
             </div>
 
@@ -93,16 +81,6 @@
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
-            </x-responsive-nav-link>
-
-            @if(Auth::user()->role === 'instructor')
-                <x-responsive-nav-link :href="route('courses.index')" :active="request()->routeIs('courses.*')">
-                    {{ __('Kelola Kursus') }}
-                </x-responsive-nav-link>
-            @endif
-
-            <x-responsive-nav-link :href="url('/explore')" :active="request()->is('explore')">
-                {{ __('Cari Kursus') }}
             </x-responsive-nav-link>
         </div>
 

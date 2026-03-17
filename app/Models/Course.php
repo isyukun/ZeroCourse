@@ -30,6 +30,12 @@ class Course extends Model
                     ->withTimestamps();
     }
 
+    public function enrolledUsers()
+    {
+        // Pastikan nama tabel pivotnya sesuai dengan yang kamu buat (misal: course_user)
+        return $this->belongsToMany(User::class, 'course_user');
+    }
+
     protected static function boot()
     {
         parent::boot();
