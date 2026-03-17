@@ -13,50 +13,46 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+// Route Utama (Bisa diakses semua user yang login)
+Route::middleware(['auth', 'verified'])->group(function () {
+    
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Katalog Kursus & Belajar (Umum)
+    Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
+    
+    // Enrollment & Progress
+    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('courses.enroll');
+    Route::post('lessons/{lesson}/complete', [ProgressController::class, 'store'])->name('lessons.complete');
+    Route::delete('lessons/{lesson}/complete', [ProgressController::class, 'destroy'])->name('lessons.incomplete');
+
+    // Melihat Materi (Show saja yang boleh diakses siswa)
+    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::resource('courses', CourseController::class);
-});
+// --- PROTEKSI INSTRUKTUR (Hanya Role Instructor/Admin) ---
+Route::middleware(['auth', 'verified', 'instructor'])->group(function () {
+    
+    // CRUD Kursus (Selain Index & Show)
+    Route::resource('courses', CourseController::class)->except(['index', 'show']);
 
-Route::middleware(['auth'])->group(function () {
-    // Route untuk tambah modul ke kursus
+    // Manajemen Modul
     Route::post('courses/{course}/modules', [ModuleController::class, 'store'])->name('modules.store');
     Route::put('/modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
     Route::delete('/modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
-    
-    // Route untuk tambah materi ke modul
-    Route::post('modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
+
+    // Manajemen Materi (CRUD selain Show)
     Route::get('/modules/{module}/lessons/create', [LessonController::class, 'create'])->name('lessons.create');
-    Route::post('/modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
-    
-    // Route untuk melihat materi
-    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
+    Route::post('modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
     Route::get('/lessons/{lesson}/edit', [LessonController::class, 'edit'])->name('lessons.edit');
     Route::put('/lessons/{lesson}', [LessonController::class, 'update'])->name('lessons.update');
     Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy'])->name('lessons.destroy');
-
-    // Route untuk enroll ke kursus
-    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])
-      ->middleware(['auth'])
-      ->name('courses.enroll');
-});
-
-Route::middleware(['auth'])->group(function () {
-    // Enrollment
-    Route::post('courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll.store');
-    
-    // Progress
-    Route::post('lessons/{lesson}/complete', [ProgressController::class, 'store'])->name('lessons.complete');
-    Route::delete('lessons/{lesson}/complete', [ProgressController::class, 'destroy'])->name('lessons.incomplete');
 });
 
 require __DIR__.'/auth.php';
