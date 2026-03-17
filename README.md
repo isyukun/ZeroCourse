@@ -39,3 +39,5 @@ Platform pembelajaran daring (*Learning Management System*) yang dibangun untuk 
 
 5. Jalankan Server:
     php artisan serve
+
+# TEST
