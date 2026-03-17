@@ -18,8 +18,6 @@ Platform pembelajaran daring (*Learning Management System*) yang dibangun untuk 
 
 ## 📸 Tampilan Proyek
 
-*(Tambahkan screenshot dashboard siswa atau halaman belajar di sini)*
-
 ## 📦 Instalasi
 
 1. Clone repository:
