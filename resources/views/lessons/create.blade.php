@@ -6,7 +6,7 @@
             <div class="bg-white p-6 shadow sm:rounded-lg">
                 <h2 class="text-xl font-bold mb-4">Tambah Materi ke: {{ $module->title }}</h2>
                 
-                <form action="{{ route('lessons.store', $module->id) }}" method="POST">
+                <form action="{{ route('modules.lessons.store', $module->id) }}" method="POST">
                     @csrf
                     <div class="mb-4">
                         <x-input-label value="Judul Materi" />

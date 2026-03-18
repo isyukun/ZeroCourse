@@ -76,4 +76,9 @@ class User extends Authenticatable
     {
         return $this->completedLessons()->where('lesson_id', $lessonId)->exists();
     }
+
+    public function progress()
+    {
+        return $this->hasMany(Progress::class);
+    }
 }

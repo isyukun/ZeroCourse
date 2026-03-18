@@ -34,4 +34,12 @@ class Lesson extends Model
         
         return $match[1] ?? null;
     }
+    
+    protected static function boot()
+    {
+        parent::boot();
+        static::creating(function ($lesson) {
+            $lesson->slug = \Illuminate\Support\Str::slug($lesson->title);
+        });
+    }
 }

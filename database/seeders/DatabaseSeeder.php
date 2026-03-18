@@ -13,6 +13,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+        CategorySeeder::class, // 1. Kategori dulu
+        CourseSeeder::class,   // 2. Kursus
+        ModuleSeeder::class,   // 3. Modul (Pastikan sudah buat ini juga)
+        LessonSeeder::class,   // 4. Baru Lesson
+        QuizSeeder::class,     // 5. Quiz
+        ]);
         // User::factory(10)->create();
 
         User::factory()->create([

@@ -8,7 +8,7 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-10">
 
-            {{-- SECTION: PANEL INSTRUKTUR (Hanya untuk Role Instructor/Admin) --}}
+            {{-- SECTION: PANEL INSTRUKTUR --}}
             @if($user->role === 'instructor' || $user->role === 'admin')
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-l-8 border-blue-600">
                     <div class="flex justify-between items-center mb-6">
@@ -33,8 +33,8 @@
                                         <span>📚 {{ $course->modules_count }} Modul</span>
                                     </div>
                                     <div class="grid grid-cols-2 gap-2">
-                                        <a href="{{ route('courses.show', $course->slug) }}" class="text-center py-2 bg-slate-800 text-white rounded-lg text-[10px] font-bold">KELOLA</a>
-                                        <a href="{{ route('courses.edit', $course->id) }}" class="text-center py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">EDIT</a>
+                                        <a href="{{ route('courses.show', $course->slug) }}" class="text-center py-2 bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase">KELOLA</a>
+                                        <a href="{{ route('courses.edit', $course->id) }}" class="text-center py-2 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold uppercase">EDIT</a>
                                     </div>
                                 </div>
                             @endforeach
@@ -43,7 +43,7 @@
                 </div>
             @endif
 
-            {{-- SECTION: PANEL SISWA (Muncul untuk semua user yang enroll) --}}
+            {{-- SECTION: PANEL SISWA --}}
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border-l-8 border-emerald-500">
                 <h3 class="text-xl font-bold text-gray-900 uppercase mb-6">Kelas Yang Saya Ambil</h3>
 
@@ -55,19 +55,38 @@
                 @else
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         @foreach($enrolledCourses as $course)
-                            <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100 shadow-inner">
+                            <div class="bg-gray-50 rounded-2xl p-6 border border-gray-100 shadow-inner relative overflow-hidden">
+                                
+                                {{-- Lencana Lulus (Badge) --}}
+                                @if($course->progress == 100)
+                                    <div class="absolute -right-8 -top-8 bg-yellow-400 text-yellow-900 px-12 py-8 rotate-45 font-black text-xs shadow-sm">
+                                        LULUS
+                                    </div>
+                                @endif
+
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-extrabold text-gray-900 truncate w-3/4">{{ $course->title }}</h4>
                                     <span class="font-black text-emerald-600">{{ $course->progress }}%</span>
                                 </div>
+
                                 <div class="w-full bg-gray-200 rounded-full h-2.5 mb-6">
-                                    <div class="bg-emerald-500 h-2.5 rounded-full" style="width: {{ $course->progress }}%"></div>
+                                    <div class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ $course->progress }}%"></div>
                                 </div>
-                                @if($course->first_lesson)
-                                    <a href="{{ route('lessons.show', $course->first_lesson->id) }}" class="block w-full text-center bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition">
-                                        {{ $course->progress > 0 ? 'LANJUTKAN BELAJAR' : 'MULAI BELAJAR' }}
-                                    </a>
-                                @endif
+
+                                <div class="flex flex-col gap-3">
+                                    @if($course->first_lesson)
+                                        <a href="{{ route('lessons.show', $course->first_lesson->id) }}" class="block w-full text-center bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 transition">
+                                            {{ $course->progress > 0 ? 'LANJUTKAN BELAJAR' : 'MULAI BELAJAR' }}
+                                        </a>
+                                    @endif
+
+                                    {{-- Tombol Cepat Ke Quiz jika materi sudah hampir selesai --}}
+                                    @if($course->progress > 80 && $course->progress < 100)
+                                        <p class="text-[10px] text-center text-orange-600 font-bold animate-pulse">
+                                            ⚠️ Selesaikan materi untuk membuka Quiz Akhir!
+                                        </p>
+                                    @endif
+                                </div>
                             </div>
                         @endforeach
                     </div>

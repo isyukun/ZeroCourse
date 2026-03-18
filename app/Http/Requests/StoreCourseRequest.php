@@ -23,9 +23,9 @@ class StoreCourseRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'category_id' => ['required', 'exists:categories,id'], // Baris ini WAJIB ada
+            'category_id' => ['required', 'exists:categories,id'],
             'description' => ['required', 'string'],
-            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'thumbnail' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'], // Tambahan untuk thumbnail
             'status' => ['nullable', 'string', 'in:draft,published'],
         ];
     }

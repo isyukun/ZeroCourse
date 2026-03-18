@@ -1,58 +1,59 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CourseController;
-use App\Http\Controllers\ModuleController;
-use App\Http\Controllers\LessonController;
-use App\Http\Controllers\EnrollmentController;
-use App\Http\Controllers\ProgressController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\{
+    ProfileController, CourseController, ModuleController, 
+    LessonController, EnrollmentController, ProgressController, 
+    DashboardController, QuizController
+};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// Route Utama (Bisa diakses semua user yang login)
 Route::middleware(['auth', 'verified'])->group(function () {
     
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile
+    // Profile (Breeze default menggunakan route manual, kita sesuaikan agar tidak error)
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Katalog Kursus & Belajar (Umum)
+    // 1. KATALOG & PENDAFTARAN
     Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
-    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
     
-    // Enrollment & Progress
-    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('courses.enroll');
+    // PERBAIKAN: Pastikan parameter menggunakan {course} agar sinkron dengan route('enrollment.store', $course->id)
+    Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enrollment.store');
+
+    // 2. MATERI, PROGRESS, & QUIZ (SISWA)
+    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
     Route::post('lessons/{lesson}/complete', [ProgressController::class, 'store'])->name('lessons.complete');
     Route::delete('lessons/{lesson}/complete', [ProgressController::class, 'destroy'])->name('lessons.incomplete');
-
-    // Melihat Materi (Show saja yang boleh diakses siswa)
-    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
-});
-
-// --- PROTEKSI INSTRUKTUR (Hanya Role Instructor/Admin) ---
-Route::middleware(['auth', 'verified', 'instructor'])->group(function () {
     
-    // CRUD Kursus (Selain Index & Show)
-    Route::resource('courses', CourseController::class)->except(['index', 'show']);
+    // Quiz Player
+    Route::get('/quizzes/{quiz}', [QuizController::class, 'show'])->name('quizzes.show');
+    Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
 
-    // Manajemen Modul
-    Route::post('courses/{course}/modules', [ModuleController::class, 'store'])->name('modules.store');
-    Route::put('/modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
-    Route::delete('/modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
+    // 3. FITUR INSTRUKTUR (RESOURCE MANAGEMENT)
+    Route::middleware(['instructor'])->group(function () {
+        
+        // Resource Kursus
+        Route::resource('courses', CourseController::class)->except(['index', 'show']);
 
-    // Manajemen Materi (CRUD selain Show)
-    Route::get('/modules/{module}/lessons/create', [LessonController::class, 'create'])->name('lessons.create');
-    Route::post('modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
-    Route::get('/lessons/{lesson}/edit', [LessonController::class, 'edit'])->name('lessons.edit');
-    Route::put('/lessons/{lesson}', [LessonController::class, 'update'])->name('lessons.update');
-    Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy'])->name('lessons.destroy');
+        // Resource Modul & Materi (Shallow agar URL ringkas)
+        Route::resource('courses.modules', ModuleController::class)->shallow()->only(['store', 'update', 'destroy']);
+        Route::resource('modules.lessons', LessonController::class)->shallow()->except(['show']);
+
+        // Resource Quiz (Instruktur)
+        // Gunakan parameter 'module' secara eksplisit agar mudah ditangkap Controller
+        Route::get('/modules/{module}/quizzes/create', [QuizController::class, 'create'])->name('modules.quizzes.create');
+        Route::post('/modules/{module}/quizzes', [QuizController::class, 'store'])->name('modules.quizzes.store');
+        Route::resource('quizzes', QuizController::class)->only(['edit', 'update', 'destroy']);
+    });
+
+    // 4. DETAIL KURSUS (SLUG) - HARUS PALING BAWAH
+    Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
 });
 
 require __DIR__.'/auth.php';

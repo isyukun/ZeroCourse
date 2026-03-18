@@ -9,6 +9,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="flex flex-col md:flex-row gap-6">
                 
+                {{-- SIDEBAR --}}
                 <div class="w-full md:w-1/4">
                     <div class="bg-white shadow sm:rounded-lg p-4 sticky top-6">
                         <h3 class="font-bold text-gray-700 mb-4 px-2 text-lg border-b pb-2">
@@ -20,7 +21,6 @@
                                     $isCompleted = auth()->user()->hasCompleted($materi->id);
                                     $isActive = $lesson->id === $materi->id;
                                     
-                                    // Materi terkunci jika bukan materi pertama DAN materi sebelumnya belum selesai
                                     $prevInList = $module->lessons->get($index - 1);
                                     $isLocked = $prevInList && !auth()->user()->hasCompleted($prevInList->id);
                                 @endphp
@@ -34,9 +34,7 @@
                                     @else
                                         <a href="{{ route('lessons.show', $materi->id) }}" 
                                            class="flex items-center p-3 rounded-lg transition {{ $isActive ? 'bg-blue-50 border-l-4 border-blue-600' : 'hover:bg-gray-100' }}">
-                                            <span class="mr-3">
-                                                {{ $isCompleted ? '✅' : '📖' }}
-                                            </span>
+                                            <span class="mr-3">{{ $isCompleted ? '✅' : '📖' }}</span>
                                             <span class="text-sm {{ $isActive ? 'text-blue-700 font-bold' : 'text-gray-700' }}">
                                                 {{ $materi->title }}
                                             </span>
@@ -44,24 +42,38 @@
                                     @endif
                                 </div>
                             @endforeach
+
+                            {{-- LINK QUIZ DI SIDEBAR --}}
+                            @if($module->quiz)
+                                @php
+                                    // Quiz terbuka jika SEMUA materi di modul ini sudah selesai
+                                    $allLessonsDone = $module->lessons->every(fn($l) => auth()->user()->hasCompleted($l->id));
+                                @endphp
+                                <div class="mt-4 pt-4 border-t">
+                                    @if($allLessonsDone)
+                                        <a href="{{ route('quizzes.show', $module->quiz->id) }}" 
+                                           class="flex items-center p-3 rounded-lg bg-indigo-50 hover:bg-indigo-100 transition border border-indigo-200">
+                                            <span class="mr-3">📝</span>
+                                            <span class="text-sm text-indigo-700 font-bold">Quiz Modul</span>
+                                        </a>
+                                    @else
+                                        <div class="flex items-center p-3 rounded-lg bg-gray-50 opacity-60 cursor-not-allowed border border-dashed">
+                                            <span class="mr-3">🔒</span>
+                                            <span class="text-sm text-gray-500 italic">Selesaikan materi untuk Quiz</span>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
 
+                {{-- MAIN CONTENT --}}
                 <div class="w-full md:w-3/4">
                     <div class="bg-white overflow-hidden shadow sm:rounded-lg p-8">
-                        
-                        {{-- Video Player (Jika ada) --}}
                         @if($lesson->youtube_id)
                             <div class="mb-8 overflow-hidden rounded-xl shadow-lg aspect-video">
-                                <iframe 
-                                    class="w-full h-full"
-                                    src="https://www.youtube.com/embed/{{ $lesson->youtube_id }}" 
-                                    title="YouTube video player" 
-                                    frameborder="0" 
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                                    allowfullscreen>
-                                </iframe>
+                                <iframe class="w-full h-full" src="https://www.youtube.com/embed/{{ $lesson->youtube_id }}" frameborder="0" allowfullscreen></iframe>
                             </div>
                         @endif
 
@@ -71,7 +83,7 @@
                             {!! $lesson->content !!}
                         </div>
 
-                        {{-- Navigasi & Tombol Selesai --}}
+                        {{-- NAVIGASI & TOMBOL SELESAI --}}
                         <div class="flex flex-col sm:flex-row justify-between items-center border-t pt-6 gap-4">
                             <div>
                                 @if($prevLesson)
@@ -90,9 +102,7 @@
                                 @else
                                     <form action="{{ route('lessons.complete', $lesson->id) }}" method="POST">
                                         @csrf
-                                        <x-primary-button class="bg-green-600 hover:bg-green-700 focus:bg-green-700 active:bg-green-800">
-                                            Tandai Selesai
-                                        </x-primary-button>
+                                        <x-primary-button class="bg-green-600 hover:bg-green-700">Tandai Selesai</x-primary-button>
                                     </form>
                                 @endif
                             </div>
@@ -105,6 +115,15 @@
                                         </a>
                                     @else
                                         <span class="text-gray-400 text-sm italic">Selesaikan untuk lanjut &rarr;</span>
+                                    @endif
+                                {{-- JIKA TIDAK ADA MATERI LAGI, ARAHKAN KE QUIZ --}}
+                                @elseif($module->quiz)
+                                    @if(auth()->user()->hasCompleted($lesson->id))
+                                        <a href="{{ route('quizzes.show', $module->quiz->id) }}" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
+                                            Mulai Quiz &rarr;
+                                        </a>
+                                    @else
+                                        <span class="text-gray-400 text-sm italic">Selesaikan untuk Quiz &rarr;</span>
                                     @endif
                                 @endif
                             </div>
