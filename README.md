@@ -38,4 +38,8 @@ Platform pembelajaran daring (*Learning Management System*) yang dibangun untuk 
 5. Jalankan Server:
     php artisan serve
 
-# TEST
+---
+### 📑 Dokumentasi Progres
+Lihat detail pengerjaan fitur dan log harian di sini:
+👉 **[Lihat Progress Pengerjaan (Progress.md)](./Progress.md)**
+---
