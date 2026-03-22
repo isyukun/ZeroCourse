@@ -4,38 +4,42 @@ Platform pembelajaran daring (*Learning Management System*) yang dibangun untuk 
 
 ## 🚀 Fitur Utama
 
-- **Sequential Learning Path**: Sistem kunci materi yang memaksa siswa menyelesaikan materi sebelumnya sebelum membuka materi baru.
-- **Progress Tracking**: Visualisasi progres belajar siswa secara *real-time* di dashboard.
-- **Role-Based Access**: Manajemen kursus khusus untuk instruktur dan alur belajar untuk siswa.
-- **Interactive Material**: Mendukung konten materi yang fleksibel dan navigasi yang intuitif (Prev/Next lesson).
+- **Sequential Learning Path**: Sistem kunci materi (Locked Content) yang memastikan siswa menyelesaikan materi secara berurutan.
+- **Progress Tracking**: Pencatatan otomatis progres belajar siswa per materi dan per modul.
+- **Interactive Quiz Player**: Sistem kuis dengan kalkulasi skor otomatis dan ambang batas kelulusan (Minimum Score).
+- **Instructor Dashboard**: Alat manajemen kursus lengkap (CRUD Course, Module, & Lesson) khusus untuk role pengajar.
+- **Dynamic Navigation**: Navigasi intuitif (Prev/Next lesson) yang mendukung perpindahan materi lintas modul.
 
 ## 🛠 Tech Stack
 
-- **Framework**: Laravel 10
-- **Frontend**: Tailwind CSS & Blade
+- **Framework**: Laravel 11.x (Latest)
+- **PHP Version**: 8.3+
+- **Frontend**: Tailwind CSS & Laravel Blade
 - **Database**: MySQL
-- **Logic**: Eloquent ORM, Collection Methods, Middleware-based Security
+- **Dependencies**: 
+    - `barryvdh/laravel-dompdf` (Untuk fitur Sertifikat)
+    - `Breeze` (Authentication starter kit)
 
 ## 📸 Tampilan Proyek
+![Dashboard Preview](link-ke-gambar-kamu)
 
-## 📦 Instalasi
+## 📦 Instalasi & Konfigurasi
 
-1. Clone repository:
+1. **Clone Repository**:
    ```bash
-   git clone [URL-REPO-MU]
+   git clone [https://github.com/username/zerocourse.git](https://github.com/username/zerocourse.git)
+   cd zerocourse
 
-2. Install dependensi:
+2. Install Dependencies:
     composer install
     npm install && npm run build
 
-3. Konfigurasi .env:
+3. Environment Setup:
     cp .env.example .env
     php artisan key:generate
 
-4. Jalankan migrasi:
-    php artisan migrate
+4. Database Migration & Seeding:
+    php artisan migrate --seed
 
-5. Jalankan Server:
+5. Run Development Server:
     php artisan serve
-
-# TEST
