@@ -10,103 +10,150 @@ use App\Http\Requests\UpdateCourseRequest;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class CourseController extends Controller
 {
-    // Menampilkan daftar kursus
+    /**
+     * BAGIAN 1: INDEX & LISTING
+     * Menampilkan semua kursus yang tersedia untuk siswa.
+     */
     public function index()
     {
-        $courses = Course::with('category')->latest()->paginate(10);
+        // Eager Loading 'category' untuk optimasi query (N+1 Problem)
+        $courses = Course::with('category')->latest()->paginate(9);
         return view('courses.index', compact('courses'));
     }
 
-    // Form buat kursus baru
+    /**
+     * BAGIAN 2: CREATE & STORE
+     * Proses pembuatan kursus baru oleh instruktur.
+     */
     public function create()
     {
         $categories = Category::all();
         return view('courses.create', compact('categories'));
     }
 
-    // Simpan kursus ke database
     public function store(StoreCourseRequest $request)
     {
         $validated = $request->validated();
         
-        // 1. Handle Upload Thumbnail
+        // Handle Upload Thumbnail dengan path yang rapi
         if ($request->hasFile('thumbnail')) {
             $validated['thumbnail'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
         }
 
-        // 2. Generate SLUG otomatis menggunakan helper Str
-        $validated['slug'] = Str::slug($validated['title']);
+        // Generate SLUG unik
+        $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(5);
 
-        // 3. Simpan data (Memastikan relasi ke user yang login terjaga)
+        // Simpan melalui relasi User agar user_id otomatis terisi
         $request->user()->courses()->create($validated);
 
-        return redirect()->route('dashboard')->with('success', 'Kursus berhasil dibuat!');
+        return redirect()->route('courses.index')->with('success', 'Kursus berhasil diterbitkan!');
     }
         
-    // Menampilkan detail kursus berdasarkan slug
+    /**
+     * BAGIAN 3: SHOW & PROGRESS TRACKING
+     * Menampilkan materi dan menghitung persentase penyelesaian user.
+     */
     public function show($slug)
     {
-        // 1. Ambil data kursus beserta relasinya
         $course = Course::with(['category', 'modules.lessons', 'modules.quiz'])
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // 2. Ambil data progress user yang sedang login untuk kursus ini
-        $userProgress = [];
+        $progressPercentage = 0;
+        $completedLessons = [];
+
         if (Auth::check()) {
-            $userProgress = Auth::user()->progress()
+            $user = Auth::user();
+            
+            // Ambil ID lesson yang sudah diselesaikan user di kursus ini
+            $completedLessons = $user->progress()
                 ->where('course_id', $course->id)
-                ->get();
+                ->where('status', 'completed')
+                ->pluck('lesson_id')
+                ->toArray();
+
+            // Hitung total item (Lesson + Quiz)
+            $totalLessons = $course->modules->flatMap->lessons->count();
+            $totalQuizzes = $course->modules->whereNotNull('quiz')->count();
+            $totalItems = $totalLessons + $totalQuizzes;
+
+            if ($totalItems > 0) {
+                $progressPercentage = round((count($completedLessons) / $totalItems) * 100);
+            }
         }
 
-        // 3. Mapping ID materi & modul yang sudah selesai agar mudah dicek di Blade
-        $completedLessons = $userProgress->pluck('lesson_id')->toArray();
-        $completedModules = $userProgress->pluck('module_id')->toArray();
-
-        return view('courses.show', compact('course', 'completedLessons', 'completedModules'));
+        return view('courses.show', compact('course', 'completedLessons', 'progressPercentage'));
     }
 
-    // Menampilkan halaman form edit
+    /**
+     * BAGIAN 4: EDIT & UPDATE
+     * Mengelola pembaruan data kursus dan validasi kepemilikan.
+     */
     public function edit(Course $course)
     {
-        // Gunakan Auth::user()->id untuk menghilangkan warning di VS Code
-        if ($course->user_id !== Auth::user()->id) {
-            abort(403, 'Anda tidak memiliki akses untuk mengubah kursus ini.');
+        // Security Check: Hanya pemilik kursus yang bisa edit
+        if ($course->user_id !== Auth::id()) {
+            abort(403, 'Akses ditolak.');
         }
 
-        $categories = Category::all(); // Tambahkan ini jika di form edit butuh pilih kategori
+        $categories = Category::all();
         return view('courses.edit', compact('course', 'categories'));
     }
 
-    // Memproses pembaruan data ke database
     public function update(UpdateCourseRequest $request, Course $course)
     {
-        // Otorisasi ulang
-        if ($course->user_id !== Auth::user()->id) {
-            abort(403);
-        }
+        if ($course->user_id !== Auth::id()) { abort(403); }
 
         $validated = $request->validated();
 
-        // Logika Handle Thumbnail Baru
         if ($request->hasFile('thumbnail')) {
-            // Hapus foto lama jika ada
+            // Hapus file lama dari storage agar tidak memenuhi server
             if ($course->thumbnail) {
                 Storage::disk('public')->delete($course->thumbnail);
             }
-            
-            // Simpan foto baru
             $validated['thumbnail'] = $request->file('thumbnail')->store('course-thumbnails', 'public');
         }
 
-        // Update slug otomatis jika judul berubah
-        $validated['slug'] = Str::slug($validated['title']);
+        // Update slug jika judul berubah (opsional, tergantung kebutuhan SEO)
+        if ($course->title !== $validated['title']) {
+            $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(5);
+        }
 
         $course->update($validated);
 
-        return redirect()->route('dashboard')->with('success', 'Kursus berhasil diperbarui!');
+        return redirect()->route('courses.show', $course->slug)->with('success', 'Perubahan berhasil disimpan!');
+    }
+
+    /**
+     * BAGIAN 5: CERTIFICATE GENERATION
+     * Membuat PDF sertifikat menggunakan DomPDF.
+     */
+    public function downloadCertificate(Course $course)
+    {
+        $user = Auth::user();
+        
+        // Validasi: Pastikan progres sudah 100%
+        $totalItems = $course->modules->flatMap->lessons->count();
+        $userCompleted = $user->progress()->where('course_id', $course->id)->where('status', 'completed')->count();
+        
+        if ($totalItems === 0 || $userCompleted < $totalItems) {
+            return back()->with('error', 'Silakan selesaikan semua materi untuk mengunduh sertifikat.');
+        }
+
+        $data = [
+            'name'      => strtoupper($user->name),
+            'course'    => $course->title,
+            'date'      => now()->translatedFormat('d F Y'),
+            'instructor'=> $course->user->name,
+            'id'        => 'CERT-' . strtoupper(Str::random(8))
+        ];
+
+        $pdf = Pdf::loadView('pdf.certificate', $data)->setPaper('a4', 'landscape');
+        
+        return $pdf->download('Sertifikat_' . Str::snake($course->title) . '.pdf');
     }
 }

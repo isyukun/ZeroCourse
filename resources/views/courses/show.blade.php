@@ -3,6 +3,21 @@
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ $course->title }}
         </h2>
+        @if(auth()->check() && ($progressPercentage ?? 0) == 100)
+            <div class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between shadow-sm animate-bounce">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">🎓</span>
+                    <div>
+                        <h4 class="font-bold text-emerald-800">Selamat, {{ auth()->user()->name }}!</h4>
+                        <p class="text-sm text-emerald-600">Kamu telah menyelesaikan semua materi. Sertifikat kamu sudah siap.</p>
+                    </div>
+                </div>
+                <a href="{{ route('courses.certificate', $course->id) }}" 
+                class="px-6 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition shadow-md">
+                    Unduh Sertifikat (PDF)
+                </a>
+            </div>
+        @endif
     </x-slot>
 
     <div class="py-12">
@@ -11,6 +26,27 @@
                 <p class="text-blue-600 font-bold mb-2">{{ $course->category->name }}</p>
                 <h3 class="text-2xl font-bold mb-4">Deskripsi Kursus</h3>
                 <p class="text-gray-700 leading-relaxed">{{ $course->description }}</p>
+
+                @auth
+                    @if(auth()->user()->enrolledCourses->contains($course->id) || auth()->id() === $course->user_id)
+                        <div class="mt-8 p-6 bg-white border border-gray-100 rounded-2xl shadow-sm">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="text-sm font-bold text-gray-700">Progres Pembelajaran</h3>
+                                <span class="text-sm font-extrabold text-blue-600">{{ $progressPercentage ?? 0 }}%</span>
+                            </div>
+                            
+                            <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                <div class="bg-gradient-to-r from-blue-600 to-indigo-400 h-full rounded-full transition-all duration-1000 ease-out"
+                                    style="width: {{ $progressPercentage ?? 0 }}%">
+                                </div>
+                            </div>
+                            
+                            <p class="mt-3 text-xs text-gray-500 italic">
+                                {{ $progressPercentage == 100 ? 'Selamat! Kamu telah menyelesaikan kursus ini.' : 'Selesaikan semua materi dan quiz untuk mendapatkan sertifikat.' }}
+                            </p>
+                        </div>
+                    @endif
+                @endauth
 
                 <div class="mt-8">
                     {{-- LOGIKA TOMBOL ENROLLMENT (AKSI SISWA) --}}
@@ -90,8 +126,21 @@
                                 @forelse($module->lessons as $lesson)
                                 <div class="group flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
                                     <div class="flex items-center gap-3">
-                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                                        <span class="text-gray-700">{{ $lesson->title }}</span>
+                                        @if(in_array($lesson->id, $completedLessons))
+                                            {{-- Ikon Centang Hijau --}}
+                                            <div class="bg-green-100 p-1 rounded-full">
+                                                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                                                </svg>
+                                            </div>
+                                            <span class="text-gray-400 line-through">{{ $lesson->title }}</span> 
+                                        @else
+                                            {{-- Ikon Default (Buku) --}}
+                                            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                            </svg>
+                                            <span class="text-gray-700 font-medium">{{ $lesson->title }}</span>
+                                        @endif
                                     </div>
                                     
                                     <div class="flex items-center gap-1">

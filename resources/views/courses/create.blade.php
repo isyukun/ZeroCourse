@@ -1,68 +1,124 @@
 <x-app-layout>
+    {{-- 
+        BAGIAN 1: HEADER & KONTEKS
+    --}}
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Buat Kursus Baru') }}
-        </h2>
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h2 class="font-black text-2xl text-gray-900 leading-tight">
+                    {{ __('Buat Kursus Baru') }}
+                </h2>
+                <p class="text-sm text-gray-500 font-medium">Siapkan kurikulum terbaik untuk siswa Anda.</p>
+            </div>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-8">
-                
-                <form action="{{ route('courses.store') }}" method="POST" enctype="multipart/form-data">
+    <div class="py-12 bg-gray-50/50 min-h-screen">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            
+            {{-- Navigasi Kembali --}}
+            <div class="mb-6">
+                <a href="{{ route('courses.index') }}" class="text-sm font-bold text-gray-400 hover:text-blue-600 transition flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7 7-7"></path></svg>
+                    Kembali ke Daftar Kursus
+                </a>
+            </div>
+
+            <div class="bg-white shadow-sm border border-gray-100 rounded-[2.5rem] overflow-hidden">
+                <form action="{{ route('courses.store') }}" method="POST" enctype="multipart/form-data" class="divide-y divide-gray-50">
                     @csrf
 
-                    <div class="mb-4">
-                        <x-input-label for="title" :value="__('Judul Kursus')" />
-                        <x-text-input id="title" class="block mt-1 w-full" type="text" name="title" :value="old('title')" required autofocus />
-                        <x-input-error :messages="$errors->get('title')" class="mt-2" />
-                    </div>
+                    {{-- 
+                        BAGIAN 2: DATA UTAMA (JUDUL & KATEGORI)
+                    --}}
+                    <div class="p-8 md:p-10 space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {{-- Judul Kursus --}}
+                            <div class="space-y-2">
+                                <x-input-label for="title" :value="__('Judul Kursus')" class="font-black text-xs uppercase tracking-widest text-gray-400" />
+                                <input id="title" name="title" type="text" 
+                                       class="w-full border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-blue-500 rounded-2xl p-4 transition-all font-bold text-gray-700" 
+                                       placeholder="Misal: Laravel Mastery 2026"
+                                       value="{{ old('title') }}" required autofocus />
+                                <x-input-error :messages="$errors->get('title')" />
+                            </div>
 
-                    <div class="mb-4">
-                        <x-input-label for="category_id" :value="__('Kategori')" />
-                        <select name="category_id" id="category_id" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
-                            <option value="">-- Pilih Kategori --</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                    {{ $category->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                        <x-input-error :messages="$errors->get('category_id')" class="mt-2" />
-                    </div>
-
-                    <div class="mb-4">
-                        <x-input-label for="description" :value="__('Deskripsi')" />
-                        <textarea id="description" name="description" rows="5" class="block mt-1 w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm" required>{{ old('description') }}</textarea>
-                        <x-input-error :messages="$errors->get('description')" class="mt-2" />
-                    </div>
-
-                    <div class="mb-6">
-                        <x-input-label for="thumbnail" :value="__('Thumbnail Kursus')" />
-                        <div class="mt-2 flex items-center gap-4">
-                            <input type="file" 
-                                   name="thumbnail" 
-                                   id="thumbnail" 
-                                   accept="image/*"
-                                   onchange="previewImage(event)"
-                                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                            {{-- Kategori --}}
+                            <div class="space-y-2">
+                                <x-input-label for="category_id" :value="__('Kategori')" class="font-black text-xs uppercase tracking-widest text-gray-400" />
+                                <div class="relative">
+                                    <select name="category_id" id="category_id" 
+                                            class="w-full border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-blue-500 rounded-2xl p-4 transition-all font-bold text-gray-600 appearance-none cursor-pointer">
+                                        <option value="">-- Pilih Kategori --</option>
+                                        @foreach($categories as $category)
+                                            <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                                {{ $category->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-gray-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </div>
+                                <x-input-error :messages="$errors->get('category_id')" />
+                            </div>
                         </div>
-                        <p class="mt-1 text-xs text-gray-500">Format: JPG, JPEG, PNG. Maksimal 2MB.</p>
-                        <x-input-error :messages="$errors->get('thumbnail')" class="mt-2" />
+
+                        {{-- Deskripsi --}}
+                        <div class="space-y-2">
+                            <x-input-label for="description" :value="__('Deskripsi Kursus')" class="font-black text-xs uppercase tracking-widest text-gray-400" />
+                            <textarea id="description" name="description" rows="5" 
+                                      class="w-full border-gray-100 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-blue-500 rounded-2xl p-4 transition-all text-gray-600 leading-relaxed" 
+                                      placeholder="Jelaskan apa yang akan dipelajari oleh siswa..."
+                                      required>{{ old('description') }}</textarea>
+                            <x-input-error :messages="$errors->get('description')" />
+                        </div>
+                    </div>
+
+                    {{-- 
+                        BAGIAN 3: UPLOAD THUMBNAIL (VISUAL DROPZONE)
+                    --}}
+                    <div class="p-8 md:p-10 bg-gray-50/30">
+                        <x-input-label :value="__('Thumbnail Kursus')" class="font-black text-xs uppercase tracking-widest text-gray-400 mb-6" />
                         
-                        <div id="preview-container" class="mt-4 hidden">
-                            <img id="image-preview" src="#" alt="Preview" class="w-48 h-32 object-cover rounded-lg border shadow-sm">
+                        <div class="flex flex-col md:flex-row items-center gap-8">
+                            {{-- Preview Area --}}
+                            <div id="preview-container" class="relative group">
+                                <div id="placeholder-box" class="w-64 h-40 bg-white rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-300">
+                                    <span class="text-4xl mb-2">🖼️</span>
+                                    <span class="text-[10px] font-bold uppercase tracking-widest">Belum Ada Gambar</span>
+                                </div>
+                                <img id="image-preview" src="#" 
+                                     class="hidden w-64 h-40 object-cover rounded-3xl border-4 border-white shadow-xl">
+                            </div>
+
+                            {{-- Dropzone Input --}}
+                            <div class="flex-grow w-full">
+                                <label for="thumbnail" class="relative group block cursor-pointer">
+                                    <input type="file" name="thumbnail" id="thumbnail" accept="image/*" onchange="previewImage(event)" class="hidden">
+                                    <div class="border-2 border-dashed border-gray-200 group-hover:border-blue-400 group-hover:bg-blue-50 rounded-2xl p-10 text-center transition-all bg-white shadow-sm">
+                                        <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
+                                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 4m4 0v12"></path></svg>
+                                        </div>
+                                        <p class="text-sm font-bold text-gray-600">Klik untuk upload gambar</p>
+                                        <p class="text-xs text-gray-400 mt-1">PNG, JPG atau JPEG (Maks. 2MB)</p>
+                                    </div>
+                                </label>
+                                <x-input-error :messages="$errors->get('thumbnail')" class="mt-2" />
+                            </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-end mt-4">
-                        <a href="{{ route('courses.index') }}" class="text-sm text-gray-600 hover:text-gray-900 mr-4">Batal</a>
-                        <x-primary-button>
-                            {{ __('Simpan Kursus') }}
-                        </x-primary-button>
+                    {{-- 
+                        BAGIAN 4: ACTION FOOTER
+                    --}}
+                    <div class="p-8 flex items-center justify-end bg-white gap-4">
+                        <a href="{{ route('courses.index') }}" class="px-6 py-4 text-sm font-bold text-gray-400 hover:text-gray-900 transition">Batal</a>
+                        <button type="submit" class="bg-blue-600 text-white px-12 py-4 rounded-2xl font-black text-sm shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95 uppercase tracking-widest">
+                            Simpan & Lanjutkan
+                        </button>
                     </div>
                 </form>
-
             </div>
         </div>
     </div>
@@ -73,8 +129,11 @@
             reader.onload = function(){
                 const output = document.getElementById('image-preview');
                 const container = document.getElementById('preview-container');
+                const placeholder = document.getElementById('placeholder-box');
+                
                 output.src = reader.result;
-                container.classList.remove('hidden');
+                output.classList.remove('hidden');
+                placeholder.classList.add('hidden');
             };
             reader.readAsDataURL(event.target.files[0]);
         }

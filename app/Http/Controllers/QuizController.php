@@ -5,22 +5,29 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Quiz;
 use App\Models\Option;
-use App\Models\Module; // Pastikan Model Module di-import
-use App\Models\Progress; // Pastikan Model Progress di-import
+use App\Models\Module;
+use App\Models\Progress;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class QuizController extends Controller
 {
-    // --- BARU: Method untuk nampilin form buat quiz ---
+    /**
+     * BAGIAN 1: PENGELOLAAN KUIS (INSTRUKSIONAL)
+     * Membuat kuis baru untuk modul tertentu.
+     */
     public function create(Module $module)
     {
+        // Pastikan hanya pemilik kursus yang bisa membuat kuis
+        if ($module->course->user_id !== Auth::id()) { abort(403); }
+        
         return view('quizzes.create', compact('module'));
     }
 
-    // --- BARU: Method untuk simpan quiz + soal + pilihan ---
     public function store(Request $request, Module $module)
     {
+        if ($module->course->user_id !== Auth::id()) { abort(403); }
+
         $request->validate([
             'title' => 'required|string|max:255',
             'minimum_score' => 'required|integer|min:0|max:100',
@@ -29,11 +36,18 @@ class QuizController extends Controller
             'questions.*.correct' => 'required',
         ]);
 
+        // Gunakan Transaction agar jika satu soal gagal, kuis tidak tersimpan setengah-setengah
         DB::transaction(function () use ($request, $module) {
-            $quiz = $module->quiz()->create([
-                'title' => $request->title,
-                'minimum_score' => $request->minimum_score,
-            ]);
+            $quiz = $module->quiz()->updateOrCreate(
+                ['module_id' => $module->id],
+                [
+                    'title' => $request->title,
+                    'minimum_score' => $request->minimum_score,
+                ]
+            );
+
+            // Bersihkan soal lama jika ini adalah update kuis
+            $quiz->questions()->delete();
 
             foreach ($request->questions as $qIndex => $qData) {
                 $question = $quiz->questions()->create([
@@ -50,56 +64,59 @@ class QuizController extends Controller
         });
 
         return redirect()->route('courses.show', $module->course->slug)
-                         ->with('success', 'Quiz berhasil dibuat!');
+                         ->with('success', 'Kuis berhasil dikonfigurasi!');
     }
 
+    /**
+     * BAGIAN 2: LOGIKA PENGERJAAN KUIS (SISWA)
+     * Menghitung skor dan menentukan status kelulusan.
+     */
     public function submit(Request $request, Quiz $quiz)
     {
-        // 1. Ambil input jawaban (Default array kosong jika tidak ada yang dijawab)
+        $user = Auth::user();
         $answers = $request->input('answers', []); 
         $totalQuestions = $quiz->questions()->count();
         $correctAnswersCount = 0;
 
-        // Jaga-jaga jika quiz belum ada soalnya
         if ($totalQuestions === 0) {
-            return back()->with('error', "Quiz ini belum memiliki pertanyaan.");
+            return back()->with('error', "Kuis ini belum siap digunakan.");
         }
 
-        // 2. Hitung Jawaban Benar
+        // Hitung jawaban benar secara efisien
         foreach ($answers as $questionId => $optionId) {
             $isCorrect = Option::where('id', $optionId)
                 ->where('question_id', $questionId)
                 ->where('is_correct', true)
                 ->exists();
                 
-            if ($isCorrect) {
-                $correctAnswersCount++;
-            }
+            if ($isCorrect) { $correctAnswersCount++; }
         }
 
-        // 3. Kalkulasi Skor (Gunakan round agar angka desimal tidak terlalu panjang)
-        $score = round(($correctAnswersCount / $totalQuestions) * 100, 2);
+        // Kalkulasi Skor Akhir
+        $score = round(($correctAnswersCount / $totalQuestions) * 100);
 
-        // 4. Cek Kelulusan
+        /**
+         * BAGIAN 3: UPDATE PROGRESS & KELULUSAN
+         * Jika lulus, modul akan terbuka (unlocked) bagi siswa.
+         */
         if ($score >= $quiz->minimum_score) {
-            // Logika: Tandai modul ini selesai di tabel progress
             Progress::updateOrCreate(
                 [
-                    'user_id' => Auth::id(),
+                    'user_id' => $user->id,
                     'course_id' => $quiz->module->course_id,
                     'module_id' => $quiz->module_id,
                 ],
                 [
                     'status' => 'completed',
-                    'score' => $score, // Simpan skor jika tabel progress mendukung
+                    'score' => $score,
                     'completed_at' => now()
                 ]
             );
 
             return redirect()->route('courses.show', $quiz->module->course->slug)
-                             ->with('success', "Selamat! Kamu lulus dengan skor $score%.");
+                             ->with('success', "Luar biasa! Skor Anda $score%. Modul ini telah selesai.");
         }
 
-        return back()->with('error', "Skor kamu $score%. Belum mencapai syarat minimum ($quiz->minimum_score%). Coba lagi!");
+        return back()->with('error', "Skor Anda $score%. Belum mencapai batas minimum ($quiz->minimum_score%). Silakan pelajari kembali materinya.");
     }
 }

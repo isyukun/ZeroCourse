@@ -7,52 +7,73 @@ use App\Http\Controllers\{
 };
 use Illuminate\Support\Facades\Route;
 
+/**
+ * BAGIAN 1: PUBLIC ROUTES
+ * Halaman yang bisa diakses tanpa login.
+ */
 Route::get('/', function () {
     return view('welcome');
 });
 
+/**
+ * BAGIAN 2: AUTHENTICATED ROUTES (SISWA & UMUM)
+ * Semua fitur di bawah ini memerlukan login.
+ */
 Route::middleware(['auth', 'verified'])->group(function () {
     
+    // Dashboard Utama
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Profile (Breeze default menggunakan route manual, kita sesuaikan agar tidak error)
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Pengaturan Profil (Breeze Default)
+    Route::controller(ProfileController::class)->group(function () {
+        Route::get('/profile', 'edit')->name('profile.edit');
+        Route::patch('/profile', 'update')->name('profile.update');
+        Route::delete('/profile', 'destroy')->name('profile.destroy');
+    });
 
-    // 1. KATALOG & PENDAFTARAN
+    /**
+     * BAGIAN 3: KATALOG, PENDAFTARAN & SERTIFIKAT
+     */
     Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
-    
-    // PERBAIKAN: Pastikan parameter menggunakan {course} agar sinkron dengan route('enrollment.store', $course->id)
     Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enrollment.store');
+    Route::get('/courses/{course}/certificate', [CourseController::class, 'downloadCertificate'])->name('courses.certificate');
 
-    // 2. MATERI, PROGRESS, & QUIZ (SISWA)
-    Route::get('lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
-    Route::post('lessons/{lesson}/complete', [ProgressController::class, 'store'])->name('lessons.complete');
-    Route::delete('lessons/{lesson}/complete', [ProgressController::class, 'destroy'])->name('lessons.incomplete');
+    /**
+     * BAGIAN 4: LEARNING PLAYER (MATERI & KUIS)
+     * Route untuk siswa belajar dan mengerjakan kuis.
+     */
+    // Progress Materi
+    Route::post('/lessons/{lesson}/complete', [LessonController::class, 'complete'])->name('lessons.complete');
+    Route::get('/lessons/{lesson}', [LessonController::class, 'show'])->name('lessons.show');
     
-    // Quiz Player
+    // Kuis Player (Siswa)
     Route::get('/quizzes/{quiz}', [QuizController::class, 'show'])->name('quizzes.show');
     Route::post('/quizzes/{quiz}/submit', [QuizController::class, 'submit'])->name('quizzes.submit');
 
-    // 3. FITUR INSTRUKTUR (RESOURCE MANAGEMENT)
+    /**
+     * BAGIAN 5: INSTRUKTUR (RESOURCE MANAGEMENT)
+     * Hanya bisa diakses oleh user dengan role 'instructor'.
+     */
     Route::middleware(['instructor'])->group(function () {
         
-        // Resource Kursus
+        // Manajemen Kursus (Tanpa Index & Show karena sudah di atas)
         Route::resource('courses', CourseController::class)->except(['index', 'show']);
 
-        // Resource Modul & Materi (Shallow agar URL ringkas)
+        // Manajemen Modul & Materi (Shallow URL agar rapi)
+        // Contoh URL: /modules/1/lessons/create
         Route::resource('courses.modules', ModuleController::class)->shallow()->only(['store', 'update', 'destroy']);
         Route::resource('modules.lessons', LessonController::class)->shallow()->except(['show']);
 
-        // Resource Quiz (Instruktur)
-        // Gunakan parameter 'module' secara eksplisit agar mudah ditangkap Controller
+        // Manajemen Kuis (Instruktur)
         Route::get('/modules/{module}/quizzes/create', [QuizController::class, 'create'])->name('modules.quizzes.create');
         Route::post('/modules/{module}/quizzes', [QuizController::class, 'store'])->name('modules.quizzes.store');
         Route::resource('quizzes', QuizController::class)->only(['edit', 'update', 'destroy']);
     });
 
-    // 4. DETAIL KURSUS (SLUG) - HARUS PALING BAWAH
+    /**
+     * BAGIAN 6: DETAIL KURSUS (SLUG)
+     * Diletakkan paling bawah agar tidak bentrok dengan route /courses/... lainnya.
+     */
     Route::get('/courses/{course:slug}', [CourseController::class, 'show'])->name('courses.show');
 });
 
